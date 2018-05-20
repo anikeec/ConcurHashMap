@@ -16,6 +16,11 @@ public class RWLock {
     
     private volatile int amountOfReadingThreads = 0;
     private volatile boolean writeLockOn = false;
+    private final GlobalLock globalLock;
+
+    public RWLock(GlobalLock globalLock) {
+        this.globalLock = globalLock;
+    }
 
     private boolean isWriteLockOn() {
         return writeLockOn;
@@ -25,11 +30,12 @@ public class RWLock {
         this.writeLockOn = writeLockOn;
     }
     
-    public void lockRead() {
+    public void lockRead() {        
         synchronized(this) {
             if(amountOfReadingThreads < Integer.MAX_VALUE)
                 amountOfReadingThreads++;
         }
+        globalLock.amountReadLocksInc();
     }
     
     public void unlockRead() {
@@ -40,12 +46,13 @@ public class RWLock {
                 //we have to notify globalLock
             }                
         }
+        globalLock.amountReadLocksDec();
     }
     
     private boolean isReadLocked() {
         if(amountOfReadingThreads == 0)
-            return true;               
-        return false;
+            return false;               
+        return true;
     }
     
     public void waitReadLockFree() {
@@ -60,17 +67,22 @@ public class RWLock {
         }
     }
     
-    public void lockWrite() {
+    public void lockWrite() {        
         synchronized(this) {
+            waitWriteLockFree();
             if(!isWriteLockOn())
                 setWriteLockOn(true);            
-        }        
+        }   
+        globalLock.amountWriteLocksInc();
     }
     
     public void unlockWrite() {
         synchronized(this) {
             if(isWriteLockOn())
-                setWriteLockOn(false);            
+                setWriteLockOn(false); 
+        }
+        globalLock.amountWriteLocksDec();
+        synchronized(this) {
             this.notifyAll();
         }        
     }
