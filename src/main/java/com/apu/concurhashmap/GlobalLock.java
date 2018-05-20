@@ -58,18 +58,22 @@ public class GlobalLock {
         }
     }
     
-    public void lock() {
+    public boolean tryLock() {
+        boolean ret = false;
         synchronized(this) {
-            while((amountReadLocks > 0) || (amountWriteLocks > 0)) {
-                try {
-                    this.wait();
-                } catch (InterruptedException ex) {
-                    Logger.getLogger(GlobalLock.class.getName()).log(Level.SEVERE, null, ex);
+            if(!isLockOn()) {
+                setLockOn(true);
+                ret = true;
+                while((amountReadLocks > 0) || (amountWriteLocks > 0)) {
+                    try {
+                        this.wait();
+                    } catch (InterruptedException ex) {
+                        Logger.getLogger(GlobalLock.class.getName()).log(Level.SEVERE, null, ex);
+                    }
                 }
             }
-            if(!isLockOn())
-                setLockOn(true);            
-        }        
+        } 
+        return ret;
     }
     
     public void unlock() {

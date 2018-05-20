@@ -6,7 +6,6 @@
 package com.apu.concurhashmap;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -35,6 +34,7 @@ public class Main {
                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
+        System.out.println(System.currentTimeMillis() + ", " + map.size());
         System.out.println(map.size());
     }
     
@@ -51,8 +51,13 @@ public class Main {
         @Override
         public void run() {
             int start = 100000*multiplier;
-            for(int i=start; i<start+100; i++) {
+            for(int i=start; i<start+4000; i++) {
                 map.put("thread" + i, null);
+                try {
+                    Thread.sleep(1);
+                } catch (InterruptedException ex) {
+                    Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+                }
             }
         }
         

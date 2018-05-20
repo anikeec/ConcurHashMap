@@ -5,7 +5,6 @@
  */
 package com.apu.concurhashmap;
 
-import java.util.Set;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -15,7 +14,7 @@ import static org.junit.Assert.*;
 
 /**
  *
- * @author Ksusha
+ * @author apu
  */
 public class ConcurHashMapTest {
     

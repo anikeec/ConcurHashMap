@@ -7,6 +7,7 @@ package com.apu.concurhashmap;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -18,25 +19,56 @@ import java.util.Set;
  */
 public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     
-    private final int INIT_BLOCK_SIZE = 8;
-    private final int INIT_BLOCKS_AMOUNT = 2;
+    private static final int INIT_BLOCK_SIZE = 8;
+    private static final int INIT_BLOCKS_AMOUNT = 2;
     private final int BLOCK_SIZE_MULT = 2;
     private final int BLOCKS_AMOUNT_MULT = 2;
-    private final List<Block<K,V>> blocks = new ArrayList<>();    
+    private List<Block<K,V>> blocks = new ArrayList<>();    
     private final GlobalLock globalLock = new GlobalLock();
-    private int blockSize = INIT_BLOCK_SIZE;
-    private int blocksAmount = INIT_BLOCKS_AMOUNT;
+    private int blockSize;
+    private int blocksAmount;
     private final float LOAD_FACTOR_DEFAULT = 0.75f;    
 
     public ConcurHashMap() {
+        this(INIT_BLOCK_SIZE, INIT_BLOCKS_AMOUNT);
+    }
+    
+    public ConcurHashMap(int blockSize, int blocksAmount) {
+        this.blockSize = blockSize;
+        this.blocksAmount = blocksAmount;
         for(int i=0; i< this.blocksAmount; i++) {
-            blocks.add(new Block<>());
+            blocks.add(new Block<>(blockSize, this.globalLock));
         }
     }
 
     @Override
     public Set entrySet() {
-        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        Set set = new HashSet();
+        for(Block block:blocks) {
+            for(int i=0;i<blockSize; i++) {
+                if(block.table[i] != null) {
+                    Node nodeTemp = block.table[i];
+                    set.add(nodeTemp);
+                    while(nodeTemp.next != null) {
+                        nodeTemp = nodeTemp.next;
+                        set.add(nodeTemp);                        
+                    }
+                }
+            }
+        }
+        return set;
+    }
+    
+    @Override
+    public int size() {
+        int fullSize = 0;
+        for(Block block:blocks) {
+            for(int i=0;i<blockSize; i++) {
+                if(block.table[i] != null)
+                    fullSize += block.table[i].length;
+            }
+        }
+        return fullSize;
     }
 
     @Override
@@ -137,28 +169,40 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         block.lock.unlockRead();
         
         return retValue;
-    }  
+    } 
         
     private void refreshTable() {
-        int fullSize = 0;
-        for(Block block:blocks) {
-            for(int i=0;i<blockSize; i++) {
-                if(block.table[i] != null)
-                    fullSize += block.table[i].length;
-            }
-        }
+        int fullSize = this.size();
         int hashTableSize = blockSize * blocksAmount;
         float loadFactorTemp = (float)hashTableSize / fullSize;
         if(loadFactorTemp < LOAD_FACTOR_DEFAULT) { 
-            System.out.println("fullSize:" + fullSize + ", loadFactor:" + loadFactorTemp);
-//            globalLock.lock();
-//            //wait until other locks will finish their works
-//            int newBlockSize = blockSize * BLOCK_SIZE_MULT;
-//            int newBlocksAmount = blocksAmount * BLOCKS_AMOUNT_MULT;
-//            
-//            //we have to remake table          
-//            
-//            globalLock.unlock();           
+            System.out.println("GlobalLockTry");
+            if(globalLock.tryLock()) {
+                System.out.println("GlobalLockOn");
+                int newBlockSize = blockSize * BLOCK_SIZE_MULT;
+                int newBlocksAmount = blocksAmount * BLOCKS_AMOUNT_MULT;                
+                System.out.println(System.currentTimeMillis() + 
+                                    ", size:" + fullSize + 
+                                    ", LF:" + loadFactorTemp + 
+                                    ", BlockSize:" + newBlockSize + 
+                                    ", BlocksAmount:" + newBlocksAmount);
+
+                ConcurHashMap newMap = 
+                        new ConcurHashMap(newBlockSize, newBlocksAmount);
+                for(Object obj:this.entrySet()) {
+                    Node node = (Node)obj;
+                    newMap.put(node.key, node.value);
+                }
+                
+                this.blocks = newMap.blocks;
+                this.blockSize = newMap.blockSize;
+                this.blocksAmount = newMap.blocksAmount;
+
+                globalLock.unlock();   
+                System.out.println("GlobalLockOff");
+            } else {
+                System.out.println("Global lock busy");
+            }
         }            
     }
     
@@ -176,8 +220,14 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     }
     
     private class Block<K,V> {
-        Node<K,V>[] table = new Node[blockSize];
-        RWLock lock = new RWLock(globalLock);
+        Node<K,V>[] table;
+        RWLock lock;
+
+        public Block(int blockSize, GlobalLock globalLock) {
+            table = new Node[blockSize];
+            lock = new RWLock(globalLock);
+        }
+           
     }
     
     private class BlockPtr {
