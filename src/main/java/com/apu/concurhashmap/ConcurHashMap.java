@@ -7,11 +7,12 @@ package com.apu.concurhashmap;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.ConcurrentModificationException;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
 /**
  *
@@ -30,6 +31,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     private int blockSize;
     private int blocksAmount;    
 
+    transient int modCount;
+    
     public ConcurHashMap() {
         this(INIT_BLOCK_SIZE, INIT_BLOCKS_AMOUNT);
     }
@@ -44,20 +47,24 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
 
     @Override
     public Set entrySet() {
-        Set set = new HashSet();
+        throw new UnsupportedOperationException("Method has not realized yet");
+    }
+    
+    public List<Node<K,V>> getAllAsList() {
+        List<Node<K,V>> list = new ArrayList<>();
         for(Block block:blocks) {
             for(int i=0;i<blockSize; i++) {
                 if(block.table[i] != null) {
                     Node nodeTemp = block.table[i];
-                    set.add(nodeTemp);
+                    list.add(nodeTemp);
                     while(nodeTemp.next != null) {
                         nodeTemp = nodeTemp.next;
-                        set.add(nodeTemp);                        
+                        list.add(nodeTemp);                        
                     }
                 }
             }
         }
-        return set;
+        return list;
     }
     
     @Override
@@ -67,6 +74,21 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         globalLock.waitLockFree();        
         V ret = this.get(getBlock(key), key);
         return ret;
+    }
+    
+    @Override
+    public void forEach(BiConsumer<? super K, ? super V> action) {
+        if (action == null)
+            throw new NullPointerException();
+        if (!blocks.isEmpty()) {
+            int mc = modCount;
+            List<Node<K,V>> list = this.getAllAsList();
+            for (Node<K,V> node : list) {
+                action.accept(node.key, node.value);
+            }
+            if (modCount != mc)
+                throw new ConcurrentModificationException();
+        }
     }
     
     @Override
@@ -172,11 +194,41 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         
         refreshTable();
         
+        ++modCount;
+        
         return retValue;
     }
 
-    private V remove(BlockPtr blockPtr, Object key) {
-        throw new UnsupportedOperationException("Method has not implemented yet");
+    private V remove(BlockPtr blockPtr, Object key) {        
+        Block block = blockPtr.block;
+        int index = blockPtr.index;
+        
+        block.lock.lockWrite();
+        block.lock.waitReadLockFree();
+        
+        V retValue = null;
+        Node<K,V> node = block.table[index];
+        if(node != null) {
+            Node<K,V> nodePrev = null;
+            do {
+                if(node.key.equals(key)) {
+                    retValue = node.value;
+                    if(nodePrev == null) { //first node in the list                        
+                        block.table[index] = node.next;
+                    } else {
+                        nodePrev.next = node.next;
+                    }
+                }
+                nodePrev = node;
+                node = node.next;
+            } while(node != null);            
+            
+        }
+        
+        block.lock.unlockWrite();        
+//        refreshTable(); 
+        ++modCount;
+        return retValue;
     }
         
     private void refreshTable() {
@@ -197,8 +249,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
 
                 ConcurHashMap newMap = 
                         new ConcurHashMap(newBlockSize, newBlocksAmount);
-                for(Object obj:this.entrySet()) {
-                    Node node = (Node)obj;
+                for(Node<K,V> node:this.getAllAsList()) {
                     newMap.put(node.key, node.value);
                 }
                 
@@ -247,7 +298,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
             this.index = indexPtr;
         }        
     }
-    
+
     private static class Node<K,V> implements Map.Entry<K,V> {
         final int hash;
         final K key;
