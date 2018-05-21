@@ -138,12 +138,10 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         block.lock.lockWrite();
         block.lock.waitReadLockFree();
         
-        //make write operation
         Node<K,V> node = new Node<>(key.hashCode(), key, value, null);
         Node<K,V> firstNode = block.table[index];
         if(firstNode == null) {
             block.table[index] = node;
-//            block.lastNode = block.firstNode;
             block.table[index].length++;
         } else {
             Node<K,V> nodeTemp = firstNode;
@@ -165,12 +163,9 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
                 retValue = nodeFinded.value;
                 nodeFinded.value = value;
             } else {
-//                block.lastNode.next = node;
                 nodeTemp.next = node;
-//                block.lastNode = node;
                 firstNode.length++;
-            } 
-            
+            }             
         }
         
         block.lock.unlockWrite();
