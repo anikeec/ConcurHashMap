@@ -23,11 +23,12 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     private static final int INIT_BLOCKS_AMOUNT = 2;
     private final int BLOCK_SIZE_MULT = 2;
     private final int BLOCKS_AMOUNT_MULT = 2;
+    private final float LOAD_FACTOR_DEFAULT = 0.75f;    
+    
     private List<Block<K,V>> blocks = new ArrayList<>();    
     private final GlobalLock globalLock = new GlobalLock();
     private int blockSize;
-    private int blocksAmount;
-    private final float LOAD_FACTOR_DEFAULT = 0.75f;    
+    private int blocksAmount;    
 
     public ConcurHashMap() {
         this(INIT_BLOCK_SIZE, INIT_BLOCKS_AMOUNT);
@@ -60,6 +61,31 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     }
     
     @Override
+    public V get(Object key) {
+        if(key == null)
+            throw new IllegalArgumentException();
+        globalLock.waitLockFree();        
+        V ret = this.get(getBlock(key), key);
+        return ret;
+    }
+    
+    @Override
+    public V put(K key, V value) {
+        if(key == null)
+            throw new IllegalArgumentException();
+        globalLock.waitLockFree();
+        return this.put(getBlock(key), key, value);
+    }
+    
+    @Override
+    public V remove(Object key) {
+        if(key == null)
+            throw new IllegalArgumentException();
+        globalLock.waitLockFree();
+        return this.remove(getBlock(key), key);
+    }
+    
+    @Override
     public int size() {
         int fullSize = 0;
         for(Block block:blocks) {
@@ -71,22 +97,38 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         return fullSize;
     }
 
-    @Override
-    public V put(K key, V value) {
-        if(key == null)
-            throw new IllegalArgumentException();
-        globalLock.waitLockFree();
-        return this.put(getBlock(key), key, value);
-    }
-
-    @Override
-    public V get(Object key) {
-        if(key == null)
-            throw new IllegalArgumentException();
-        globalLock.waitLockFree();        
-        V ret = this.get(getBlock(key), key);
-        return ret;
-    }
+    private V get(BlockPtr blockPtr, Object key) {
+        V retValue = null;
+        Block block = blockPtr.block;
+        int index = blockPtr.index;
+        
+        block.lock.waitWriteLockFree();
+        block.lock.lockRead();
+        
+        if(block.table[index] == null)
+            retValue = null;        
+        
+        Node<K,V> node = block.table[index];
+        if(node == null) {
+            retValue = null;
+        } else if(node.next == null) {
+            if(node.key.equals(key)) {
+                retValue = node.value;
+            }
+        } else {
+            while(node.next != null) {
+                if(node.key.equals(key)) {
+                    retValue = node.value;
+                    break;
+                }
+                node = node.next;
+            } 
+        }
+        
+        block.lock.unlockRead();
+        
+        return retValue;
+    } 
     
     private V put(BlockPtr blockPtr, K key, V value) {
         V retValue = null;
@@ -137,39 +179,10 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         
         return retValue;
     }
-    
-    private V get(BlockPtr blockPtr, Object key) {
-        V retValue = null;
-        Block block = blockPtr.block;
-        int index = blockPtr.index;
-        
-        block.lock.waitWriteLockFree();
-        block.lock.lockRead();
-        
-        if(block.table[index] == null)
-            retValue = null;        
-        
-        Node<K,V> node = block.table[index];
-        if(node == null) {
-            retValue = null;
-        } else if(node.next == null) {
-            if(node.key.equals(key)) {
-                retValue = node.value;
-            }
-        } else {
-            while(node.next != null) {
-                if(node.key.equals(key)) {
-                    retValue = node.value;
-                    break;
-                }
-                node = node.next;
-            } 
-        }
-        
-        block.lock.unlockRead();
-        
-        return retValue;
-    } 
+
+    private V remove(BlockPtr blockPtr, Object key) {
+        throw new UnsupportedOperationException("Method has not implemented yet");
+    }
         
     private void refreshTable() {
         int fullSize = this.size();
