@@ -5,6 +5,9 @@
  */
 package com.apu.concurhashmap;
 
+import java.util.List;
+import java.util.Set;
+import java.util.function.BiConsumer;
 import org.junit.After;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -17,6 +20,8 @@ import static org.junit.Assert.*;
  * @author apu
  */
 public class ConcurHashMapTest {
+    
+    private ConcurHashMap<String, String> instance;
     
     public ConcurHashMapTest() {
     }
@@ -31,6 +36,7 @@ public class ConcurHashMapTest {
     
     @Before
     public void setUp() {
+        instance = new ConcurHashMap<>();
     }
     
     @After
@@ -40,16 +46,11 @@ public class ConcurHashMapTest {
     /**
      * Test of entrySet method, of class ConcurHashMap.
      */
-//    @Test
-//    public void testEntrySet() {
-//        System.out.println("entrySet");
-//        ConcurHashMap instance = new ConcurHashMap();
-//        Set expResult = null;
-//        Set result = instance.entrySet();
-//        assertEquals(expResult, result);
-//        // TODO review the generated test code and remove the default call to fail.
-//        fail("The test case is a prototype.");
-//    }
+    @Test(expected = UnsupportedOperationException.class)
+    public void testEntrySet() {
+        System.out.println("entrySet");
+        Set result = instance.entrySet();
+    }
 
     /**
      * Test of put method, of class ConcurHashMap.
@@ -59,11 +60,8 @@ public class ConcurHashMapTest {
         System.out.println("put");
         String key = "testKey";
         String value = "testValue";
-        ConcurHashMap<String, String> instance = new ConcurHashMap<>();
-        String expResult = null;
         String result = instance.put(key, value);
-        assertEquals(expResult, result);
-        
+        assertEquals(null, result);        
         result = instance.put(key, "test2Value");
         assertEquals(value, result);
     }
@@ -74,13 +72,79 @@ public class ConcurHashMapTest {
     @Test
     public void testGet() {
         System.out.println("get");
-        String key = "key";
-        String value = "value";
-        ConcurHashMap<String, String> instance = new ConcurHashMap<>();
+        String key = "testKey";
+        String value = "testValue";
         instance.put(key, value);
-        String expResult = "value";
         String result = instance.get(key);
-        assertEquals(expResult, result);
+        assertEquals(value, result);
+    }
+
+    /**
+     * Test of remove method, of class ConcurHashMap.
+     */
+    @Test
+    public void testRemove() {
+        System.out.println("remove");
+        String key = "testKey1";
+        String value = "testValue1";
+        instance.put(key, value);
+        key = "testKey2";
+        value = "testValue2";
+        instance.put(key, value);
+        key = "testKey3";
+        value = "testValue3";
+        instance.put(key, value);
+        assertTrue(instance.size() == 3);        
+        String result = instance.remove(key);
+        assertEquals(value, result);
+    }
+
+    /**
+     * Test of size method, of class ConcurHashMap.
+     */
+    @Test
+    public void testSize() {
+        System.out.println("size");
+        assertTrue(instance.isEmpty()); 
+        String key = "testKey1";
+        String value = "testValue1";
+        instance.put(key, value);
+        key = "testKey2";
+        value = "testValue2";
+        instance.put(key, value);
+        assertTrue(instance.size() == 2);        
+    }   
+
+    /**
+     * Test of getAllAsList method, of class ConcurHashMap.
+     */
+    @Test
+    public void testGetAllAsList() {
+        System.out.println("getAllAsList");
+        String key = "testKey1";
+        String value = "testValue1";
+        instance.put(key, value);
+        key = "testKey2";
+        value = "testValue2";
+        instance.put(key, value);
+        List result = instance.getAllAsList();
+        assertTrue(result.size() == 2);
+    }
+
+    /**
+     * Test of forEach method, of class ConcurHashMap.
+     */
+    @Test
+    public void testForEach() {
+        System.out.println("forEach");
+        String key = "testKey1";
+        String value = "testValue1";
+        instance.put(key, value);
+        key = "testKey2";
+        value = "testValue2";
+        instance.put(key, value);
+        instance.forEach((k,v) -> System.out.println("key: " + k + ", value: " + v));
+        assertTrue(true);
     }
     
 }
