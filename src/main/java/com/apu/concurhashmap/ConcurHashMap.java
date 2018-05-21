@@ -192,7 +192,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         
         block.lock.unlockWrite();
         
-        refreshTable();
+//        refreshTable();
         
         ++modCount;
         
@@ -266,7 +266,6 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     }
     
     private int hash(Object key) {
-        int h;
         return (key == null) ? 0 : (key.hashCode() & 0x7FFFFFFF);
     }
     
