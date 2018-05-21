@@ -6,6 +6,8 @@
 package com.apu.concurhashmap;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -19,7 +21,9 @@ public class Main {
     
     public static void main(String[] args) {
         Map map = new ConcurHashMap();
+//        Map map = Collections.synchronizedMap(new HashMap());
         List<Thread> threads = new ArrayList<>();
+        long startTime = System.currentTimeMillis();
         for(int i=0; i<10; i++) {
             Thread thread = new Thread(new TestHashTable(map, i));
             threads.add(thread);
@@ -34,7 +38,8 @@ public class Main {
                 Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        System.out.println(System.currentTimeMillis() + ", " + map.size());
+        long finishTime = System.currentTimeMillis();
+        System.out.println(finishTime - startTime + " ms, " + map.size());
         System.out.println(map.size());
     }
     
