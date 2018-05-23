@@ -27,3 +27,24 @@ MapBenchmark.test            10  concurhashmap             1  avgt   15  1355,61
 MapBenchmark.test            10  concurhashmap            10  avgt   15  2540,630 ± 93,788  us/op
 MapBenchmark.test            10      hashtable             1  avgt   15   607,323 ± 39,552  us/op
 MapBenchmark.test            10      hashtable            10  avgt   15  1112,694 ± 89,747  us/op
+
+
+When we insert random values:
+
+Result "com.apu.concurhashmap.MapBenchmark.test":
+  2648,248 ±(99.9%) 127,471 us/op [Average]
+  (min, avg, max) = (2380,383, 2648,248, 2808,961), stdev = 119,236
+  CI (99.9%): [2520,777, 2775,719] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:00:31
+
+Benchmark          (readersNum)         (type)  (writersNum)  Mode  Cnt     Score     Error  Units
+MapBenchmark.test             1  concurhashmap             1  avgt   15   292,489 ±  15,349  us/op
+MapBenchmark.test             1  concurhashmap            10  avgt   15  1681,081 ± 103,808  us/op
+MapBenchmark.test             1      hashtable             1  avgt   15   196,931 ±   9,699  us/op
+MapBenchmark.test             1      hashtable            10  avgt   15  1607,101 ±  93,696  us/op
+MapBenchmark.test            10  concurhashmap             1  avgt   15  1506,955 ±  75,592  us/op
+MapBenchmark.test            10  concurhashmap            10  avgt   15  2906,165 ± 167,410  us/op
+MapBenchmark.test            10      hashtable             1  avgt   15  1377,561 ±  92,660  us/op
+MapBenchmark.test            10      hashtable            10  avgt   15  2648,248 ± 127,471  us/op

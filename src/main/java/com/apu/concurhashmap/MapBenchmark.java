@@ -75,6 +75,8 @@ public class MapBenchmark {
         for (int i = 0; i < writersNum; i++) {
             futures.add(CompletableFuture.runAsync(() -> {
                 for (int j = 0; j < NUM; j++) {
+                    Double dbl = Math.random()*NUM;
+                    j = dbl.intValue();
                     map.put(j, j);
                 }
             }));
@@ -83,6 +85,8 @@ public class MapBenchmark {
         for (int i = 0; i < readersNum; i++) {
             futures.add(CompletableFuture.runAsync(() -> {
                 for (int j = 0; j < NUM; j++) {
+                    Double dbl = Math.random()*NUM;
+                    j = dbl.intValue();
                     bh.consume(map.get(j));
                 }
             }));
