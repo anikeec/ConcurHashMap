@@ -26,7 +26,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     private final int BLOCKS_AMOUNT_MULT = 2;
     private final float LOAD_FACTOR_DEFAULT = 0.75f;    
     
-    private List<Block<K,V>> blocks = new ArrayList<>();    
+    private Block<K,V>[] blocks;    
     private final GlobalLock globalLock = new GlobalLock();
     private int blockSize;
     private int blocksAmount;    
@@ -40,8 +40,9 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     public ConcurHashMap(int blockSize, int blocksAmount) {
         this.blockSize = blockSize;
         this.blocksAmount = blocksAmount;
+        blocks = new Block[blocksAmount];
         for(int i=0; i< this.blocksAmount; i++) {
-            blocks.add(new Block<>(blockSize, this.globalLock));
+            blocks[i] = new Block<>(blockSize, this.globalLock);
         }
     }
 
@@ -80,7 +81,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     public void forEach(BiConsumer<? super K, ? super V> action) {
         if (action == null)
             throw new NullPointerException();
-        if (!blocks.isEmpty()) {
+//        if (!blocks.isEmpty()) {
             int mc = modCount;
             List<Node<K,V>> list = this.getAllAsList();
             for (Node<K,V> node : list) {
@@ -88,7 +89,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
             }
             if (modCount != mc)
                 throw new ConcurrentModificationException();
-        }
+//        }
     }
     
     @Override
@@ -123,8 +124,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         V retValue = null;
         Block block = blockPtr.block;
         int index = blockPtr.index;
-        
-        block.lock.waitWriteLockFree();
+//        System.out.println(Thread.currentThread().getName() + " - rdB" + blockPtr.blockId);
         block.lock.lockRead();
         
         if(block.table[index] == null)
@@ -156,9 +156,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         V retValue = null;
         Block block = blockPtr.block;
         int index = blockPtr.index;
-        
+//        System.out.println(Thread.currentThread().getName() + " - wrB" + blockPtr.blockId);
         block.lock.lockWrite();
-        block.lock.waitReadLockFree();
         
         Node<K,V> node = new Node<>(key.hashCode(), key, value, null);
         Node<K,V> firstNode = block.table[index];
@@ -204,7 +203,6 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         int index = blockPtr.index;
         
         block.lock.lockWrite();
-        block.lock.waitReadLockFree();
         
         V retValue = null;
         Node<K,V> node = block.table[index];
@@ -274,7 +272,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         int globalTablelPtr = hash%(blocksAmount*blockSize);
         int blockNumber = globalTablelPtr/blockSize;
         int blockTablePtr = globalTablelPtr - (blockNumber * blockSize);         
-        return new BlockPtr(blocks.get(blockNumber), blockTablePtr);
+        return new BlockPtr(blockNumber, blocks[blockNumber], blockTablePtr);
     }
     
     private class Block<K,V> {
@@ -290,9 +288,11 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     
     private class BlockPtr {
         Block block;
-        int index;
+        volatile int index;
+        int blockId;
         
-        public BlockPtr(Block blockPtr, int indexPtr) {
+        public BlockPtr(int blockId, Block blockPtr, int indexPtr) {
+            this.blockId = blockId;
             this.block = blockPtr;
             this.index = indexPtr;
         }        
