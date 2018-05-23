@@ -32,6 +32,7 @@ public class RWLock {
     
     public void lockRead() {        
         synchronized(this) {
+            waitWriteLockFree();
             if(amountOfReadingThreads < Integer.MAX_VALUE)
                 amountOfReadingThreads++;
         }
@@ -44,6 +45,7 @@ public class RWLock {
                 amountOfReadingThreads--;
             if(amountOfReadingThreads == 0) {
                 //we have to notify globalLock
+                this.notifyAll();
             }                
         }
         globalLock.amountReadLocksDec();
@@ -55,7 +57,7 @@ public class RWLock {
         return true;
     }
     
-    public void waitReadLockFree() {
+    private void waitReadLockFree() {
         synchronized(this) {
             while(this.isReadLocked()) {
                 try {
@@ -70,19 +72,25 @@ public class RWLock {
     public void lockWrite() {        
         synchronized(this) {
             waitWriteLockFree();
-            if(!isWriteLockOn())
+            waitReadLockFree();
+            if(!isWriteLockOn()) {
                 setWriteLockOn(true);            
+//                System.out.println(Thread.currentThread().getName() + " - wLon");
+            }
         }   
         globalLock.amountWriteLocksInc();
     }
     
     public void unlockWrite() {
         synchronized(this) {
-            if(isWriteLockOn())
+            if(isWriteLockOn()) {
                 setWriteLockOn(false); 
+//                System.out.println(Thread.currentThread().getName() + " - wLoff");
+            }
         }
         globalLock.amountWriteLocksDec();
         synchronized(this) {
+//            System.out.println(Thread.currentThread().getName() + " - wLn");
             this.notifyAll();
         }        
     }
@@ -91,8 +99,9 @@ public class RWLock {
         return this.isWriteLockOn();
     }
     
-    public void waitWriteLockFree() {
+    private void waitWriteLockFree() {
         synchronized(this) {
+//            System.out.println(Thread.currentThread().getName() + " - wLf");
             while(this.isWriteLocked()) {
                 try {
                     this.wait();
