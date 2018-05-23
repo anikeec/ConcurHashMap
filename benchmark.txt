@@ -1,0 +1,29 @@
+# JMH version: 1.19
+# VM version: JDK 1.8.0_121, VM 25.121-b13
+# VM invoker: C:\Program Files\Java\jre1.8.0_121\bin\java.exe
+# VM options: <none>
+# Warmup: 5 iterations, 100 ms each
+# Measurement: 5 iterations, 100 ms each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Average time, time/op
+# Benchmark: com.apu.concurhashmap.MapBenchmark.test
+# Parameters: (readersNum = 1, type = concurhashmap, writersNum = 1)
+
+Result "com.apu.concurhashmap.MapBenchmark.test":
+  1112,694 ±(99.9%) 89,747 us/op [Average]
+  (min, avg, max) = (897,492, 1112,694, 1267,160), stdev = 83,950
+  CI (99.9%): [1022,946, 1202,441] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:00:31
+
+Benchmark          (readersNum)         (type)  (writersNum)  Mode  Cnt     Score    Error  Units
+MapBenchmark.test             1  concurhashmap             1  avgt   15   217,560 ± 12,120  us/op
+MapBenchmark.test             1  concurhashmap            10  avgt   15  1383,169 ± 71,067  us/op
+MapBenchmark.test             1      hashtable             1  avgt   15    99,826 ±  5,523  us/op
+MapBenchmark.test             1      hashtable            10  avgt   15   617,285 ± 29,954  us/op
+MapBenchmark.test            10  concurhashmap             1  avgt   15  1355,612 ± 34,797  us/op
+MapBenchmark.test            10  concurhashmap            10  avgt   15  2540,630 ± 93,788  us/op
+MapBenchmark.test            10      hashtable             1  avgt   15   607,323 ± 39,552  us/op
+MapBenchmark.test            10      hashtable            10  avgt   15  1112,694 ± 89,747  us/op
