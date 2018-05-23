@@ -20,8 +20,8 @@ import java.util.function.BiConsumer;
  */
 public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     
-    private static final int INIT_BLOCK_SIZE = 8;
-    private static final int INIT_BLOCKS_AMOUNT = 2;
+    private static final int INIT_BLOCK_SIZE = 10;
+    private static final int INIT_BLOCKS_AMOUNT = 1000;
     private final int BLOCK_SIZE_MULT = 2;
     private final int BLOCKS_AMOUNT_MULT = 2;
     private final float LOAD_FACTOR_DEFAULT = 0.75f;    
@@ -29,7 +29,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     private Block<K,V>[] blocks;    
     private final GlobalLock globalLock = new GlobalLock();
     private int blockSize;
-    private int blocksAmount;    
+    private int blocksAmount; 
+    private int fullSize;
 
     transient int modCount;
     
@@ -40,6 +41,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     public ConcurHashMap(int blockSize, int blocksAmount) {
         this.blockSize = blockSize;
         this.blocksAmount = blocksAmount;
+        this.fullSize = blockSize * blocksAmount;
         blocks = new Block[blocksAmount];
         for(int i=0; i< this.blocksAmount; i++) {
             blocks[i] = new Block<>(blockSize, this.globalLock);
@@ -269,9 +271,9 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     
     private BlockPtr getBlock(Object key) {
         int hash = hash(key);
-        int globalTablelPtr = hash%(blocksAmount*blockSize);
+        int globalTablelPtr = hash%fullSize;
         int blockNumber = globalTablelPtr/blockSize;
-        int blockTablePtr = globalTablelPtr - (blockNumber * blockSize);         
+        int blockTablePtr = globalTablelPtr % blockSize;         
         return new BlockPtr(blockNumber, blocks[blockNumber], blockTablePtr);
     }
     
