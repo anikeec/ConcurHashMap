@@ -53,7 +53,7 @@ public class RWLock {
     
     private boolean isReadLocked() {
         if(amountOfReadingThreads == 0)
-            return false;               
+            return false;
         return true;
     }
     
