@@ -76,8 +76,8 @@ public class MapBenchmark {
             futures.add(CompletableFuture.runAsync(() -> {
                 for (int j = 0; j < NUM; j++) {
                     Double dbl = Math.random()*NUM;
-                    j = dbl.intValue();
-                    map.put(j, j);
+                    int k = dbl.intValue();
+                    map.put(k, k);
                 }
             }));
         }
@@ -86,8 +86,8 @@ public class MapBenchmark {
             futures.add(CompletableFuture.runAsync(() -> {
                 for (int j = 0; j < NUM; j++) {
                     Double dbl = Math.random()*NUM;
-                    j = dbl.intValue();
-                    bh.consume(map.get(j));
+                    int k = dbl.intValue();
+                    bh.consume(map.get(k));
                 }
             }));
         }
