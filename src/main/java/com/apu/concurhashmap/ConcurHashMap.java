@@ -136,12 +136,12 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         if(node == null) {
             retValue = null;
         } else if(node.next == null) {
-            if(node.key.equals(key)) {
+            if(node.key.equals((K)key)) {
                 retValue = node.value;
             }
         } else {
-            while(node.next != null) {
-                if(node.key.equals(key)) {
+            while(node != null) {
+                if(node.key.equals((K)key)) {
                     retValue = node.value;
                     break;
                 }
@@ -169,16 +169,18 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         } else {
             Node<K,V> nodeTemp = firstNode;
             Node<K,V> nodeFinded = null;
+            Node<K,V> nodePrev = nodeTemp;
             if(nodeTemp.next == null) {
                 if(nodeTemp.key.equals(key)) {
                     nodeFinded = nodeTemp;
                 }
             } else {
-                while(nodeTemp.next != null) {
+                while(nodeTemp != null) {
                     if(nodeTemp.key.equals(key)) {
                         nodeFinded = nodeTemp;
                         break;
                     }
+                    nodePrev = nodeTemp;
                     nodeTemp = nodeTemp.next;
                 } 
             }
@@ -186,7 +188,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
                 retValue = nodeFinded.value;
                 nodeFinded.value = value;
             } else {
-                nodeTemp.next = node;
+                nodePrev.next = node;
                 firstNode.length++;
             }             
         }
