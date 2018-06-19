@@ -124,7 +124,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         V retValue = null;
         Block block = blockPtr.block;
         int index = blockPtr.index;
-//        System.out.println(Thread.currentThread().getName() + " - rdB" + blockPtr.blockId);
+        Logger.debug(this.getClass(), 
+                Thread.currentThread().getName() + " - rdB" + blockPtr.blockId);
         block.lock.lockRead();    
         try {
             Node<K,V> node = block.table[index];
@@ -163,7 +164,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         V retValue = null;
         Block block = blockPtr.block;
         int index = blockPtr.index;
-//        System.out.println(Thread.currentThread().getName() + " - wrB" + blockPtr.blockId);
+        Logger.debug(this.getClass(),
+                Thread.currentThread().getName() + " - wrB" + blockPtr.blockId);
         synchronized(block.lock) {
             block.lock.lockWrite();
             try {

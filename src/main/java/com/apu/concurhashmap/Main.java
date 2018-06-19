@@ -28,8 +28,10 @@ public class Main {
         Map<Integer, Integer> mapEt = new HashMap();
         final Map<Integer, Integer> map0 = new ConcurHashMap<>();
         final Map<Integer, Integer> map1 = new ConcurHashMap<>();
-        final Map<Integer, Integer> map2 = new ConcurrentHashMap();//Collections.synchronizedMap(new HashMap());
-        final Map<Integer, Integer> map3 = new Hashtable<>();//Collections.synchronizedMap(new HashMap());
+        final Map<Integer, Integer> map2 = new ConcurrentHashMap();
+                        //Collections.synchronizedMap(new HashMap());
+        final Map<Integer, Integer> map3 = new Hashtable<>();
+                        //Collections.synchronizedMap(new HashMap());
         List<Thread> threads = new ArrayList<>();        
         
         final int THREAD_AMOUNT = 10;        
@@ -131,7 +133,7 @@ public class Main {
                     read = map.get(read2);
                 }                              
 //                    if(read != insertData) {
-//                        System.out.println(Thread.currentThread().getName() + "_fail: " + insertData + ". - " + amount);
+//                        Logger.debug(this.getClass(),Thread.currentThread().getName() + "_fail: " + insertData + ". - " + amount);
 //                    }
                     synchronized(this) {
 //                        if((read%MAX_TEST != 0)&&(map.get(read-1) != null)) {
@@ -141,7 +143,9 @@ public class Main {
 //                        }
                     }                
                 } catch(Exception e) {
-                    System.out.println(Thread.currentThread().getName() + ": " + e.getMessage() + ", key: " + insertData + ". - " + amount);
+                    com.apu.concurhashmap.Logger.debug(this.getClass(),
+                        Thread.currentThread().getName() + ": " + 
+                        e.getMessage() + ", key: " + insertData + ". - " + amount);
                     failList.add(insertData);
                     amount++;
                 }
@@ -153,7 +157,8 @@ public class Main {
                 }
                 System.out.println("");
             }
-//            System.out.println(Thread.currentThread().getName() + ": amountDel = " + amountDel);
+//            Logger.debug(this.getClass(),
+//                Thread.currentThread().getName() + ": amountDel = " + amountDel);
             latchFinish.countDown();
         }
         
