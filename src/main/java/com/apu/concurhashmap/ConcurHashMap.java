@@ -83,15 +83,13 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     public void forEach(BiConsumer<? super K, ? super V> action) {
         if (action == null)
             throw new NullPointerException();
-//        if (!blocks.isEmpty()) {
-            int mc = modCount;
-            List<Node<K,V>> list = this.getAllAsList();
-            for (Node<K,V> node : list) {
-                action.accept(node.key, node.value);
-            }
-            if (modCount != mc)
-                throw new ConcurrentModificationException();
-//        }
+        int mc = modCount;
+        List<Node<K,V>> list = this.getAllAsList();
+        for (Node<K,V> node : list) {
+            action.accept(node.key, node.value);
+        }
+        if (modCount != mc)
+            throw new ConcurrentModificationException();
     }
     
     @Override
