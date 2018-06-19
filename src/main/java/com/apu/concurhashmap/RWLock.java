@@ -21,14 +21,6 @@ public class RWLock {
     public RWLock(GlobalLock globalLock) {
         this.globalLock = globalLock;
     }
-
-    private boolean isWriteLockOn() {
-        return writeLockOn;
-    }
-
-    private void setWriteLockOn(boolean writeLockOn) {
-        this.writeLockOn = writeLockOn;
-    }
     
     public void lockRead() {        
         synchronized(this) {
@@ -36,7 +28,7 @@ public class RWLock {
             if(amountOfReadingThreads < Integer.MAX_VALUE)
                 amountOfReadingThreads++;
         }
-        globalLock.amountReadLocksInc();
+//        globalLock.amountReadLocksInc();
     }
     
     public void unlockRead() {
@@ -48,7 +40,7 @@ public class RWLock {
                 this.notifyAll();
             }                
         }
-        globalLock.amountReadLocksDec();
+//        globalLock.amountReadLocksDec();
     }
     
     private boolean isReadLocked() {
@@ -73,36 +65,36 @@ public class RWLock {
         synchronized(this) {
             waitWriteLockFree();
             waitReadLockFree();
-            if(!isWriteLockOn()) {
-                setWriteLockOn(true);            
+            if(!writeLockOn) {
+                writeLockOn = true;            
 //                System.out.println(Thread.currentThread().getName() + " - wLon");
+            } else {
+                System.err.println("Error - writeLockOn");
             }
         }   
-        globalLock.amountWriteLocksInc();
+//        globalLock.amountWriteLocksInc();
     }
     
     public void unlockWrite() {
         synchronized(this) {
-            if(isWriteLockOn()) {
-                setWriteLockOn(false); 
+            if(writeLockOn) {
+                writeLockOn = false; 
 //                System.out.println(Thread.currentThread().getName() + " - wLoff");
+            } else {
+                System.err.println("Error - writeLockOff");
             }
         }
-        globalLock.amountWriteLocksDec();
+//        globalLock.amountWriteLocksDec();
         synchronized(this) {
 //            System.out.println(Thread.currentThread().getName() + " - wLn");
             this.notifyAll();
         }        
     }
     
-    public boolean isWriteLocked() {
-        return this.isWriteLockOn();
-    }
-    
     private void waitWriteLockFree() {
         synchronized(this) {
 //            System.out.println(Thread.currentThread().getName() + " - wLf");
-            while(this.isWriteLocked()) {
+            while(writeLockOn) {
                 try {
                     this.wait();
                 } catch (InterruptedException ex) {
