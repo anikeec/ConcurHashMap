@@ -84,7 +84,7 @@ public class GlobalLock {
         }        
     }
     
-    public boolean checkLockOn() {
+    private boolean checkLockOn() {
         synchronized(this) {
             if(this.isLockOn()) 
                 return true;
