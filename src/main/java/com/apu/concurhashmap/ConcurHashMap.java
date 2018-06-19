@@ -147,7 +147,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
 
 //            if(retValue == null) {
 //                node = block.table[index];
-//                System.out.println("key:" + key + "hash:" + hash(key) + ", Bl:" + block + ", id:" + index);
+//                Logger.debug(this.getClass(), 
+//        "key:" + key + "hash:" + hash(key) + ", Bl:" + block + ", id:" + index);
 //                while(node != null) {
 //                    System.out.print(node.value + ",");
 //                    node = node.next;

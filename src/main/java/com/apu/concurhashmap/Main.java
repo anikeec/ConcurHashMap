@@ -57,7 +57,8 @@ public class Main {
         CountDownLatch latchFinish = new CountDownLatch(THREAD_AMOUNT);
         long startTime = System.currentTimeMillis();
         for(int i=0; i<THREAD_AMOUNT; i++) {
-            Thread thread = new Thread(new TestHashTable(latchStart, latchFinish, inputData1, map0, i));
+            Thread thread = new Thread(
+                new TestHashTable(latchStart, latchFinish, inputData1, map0, i));
             thread.setName("t1_" + i);
             threads.add(thread);
             thread.start();
@@ -75,7 +76,8 @@ public class Main {
         latchFinish = new CountDownLatch(THREAD_AMOUNT);
         startTime = System.currentTimeMillis();
         for(int i=0; i<THREAD_AMOUNT; i++) {
-            Thread thread = new Thread(new TestHashTable(latchStart, latchFinish, inputData1, map3, i));
+            Thread thread = new Thread(
+                new TestHashTable(latchStart, latchFinish, inputData1, map3, i));
             thread.setName("t2_" + i);
             threads.add(thread);
             thread.start();
@@ -133,7 +135,8 @@ public class Main {
                     read = map.get(read2);
                 }                              
 //                    if(read != insertData) {
-//                        Logger.debug(this.getClass(),Thread.currentThread().getName() + "_fail: " + insertData + ". - " + amount);
+//                        Logger.debug(this.getClass(),
+//    Thread.currentThread().getName() + "_fail: " + insertData + ". - " + amount);
 //                    }
                     synchronized(this) {
 //                        if((read%MAX_TEST != 0)&&(map.get(read-1) != null)) {

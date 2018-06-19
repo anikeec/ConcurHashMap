@@ -67,7 +67,8 @@ public class RWLock {
             waitReadLockFree();
             if(!writeLockOn) {
                 writeLockOn = true;            
-//                System.out.println(Thread.currentThread().getName() + " - wLon");
+//                com.apu.concurhashmap.Logger.debug(this.getClass(),
+//                                Thread.currentThread().getName() + " - wLon");
             } else {
                 System.err.println("Error - writeLockOn");
             }
@@ -79,21 +80,24 @@ public class RWLock {
         synchronized(this) {
             if(writeLockOn) {
                 writeLockOn = false; 
-//                System.out.println(Thread.currentThread().getName() + " - wLoff");
+//                com.apu.concurhashmap.Logger.debug(this.getClass(),
+//                                Thread.currentThread().getName() + " - wLoff");
             } else {
                 System.err.println("Error - writeLockOff");
             }
         }
 //        globalLock.amountWriteLocksDec();
         synchronized(this) {
-//            System.out.println(Thread.currentThread().getName() + " - wLn");
+//            com.apu.concurhashmap.Logger.debug(this.getClass(),
+//                                Thread.currentThread().getName() + " - wLn");
             this.notifyAll();
         }        
     }
     
     private void waitWriteLockFree() {
         synchronized(this) {
-//            System.out.println(Thread.currentThread().getName() + " - wLf");
+//            com.apu.concurhashmap.Logger.debug(this.getClass(),
+//                                Thread.currentThread().getName() + " - wLf");
             while(writeLockOn) {
                 try {
                     this.wait();

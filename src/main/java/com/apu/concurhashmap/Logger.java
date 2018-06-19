@@ -11,8 +11,11 @@ package com.apu.concurhashmap;
  */
 public class Logger {
     
+    private static boolean debugEnable = false;
+    
     public static void debug(Class cl, String message) {
-        System.out.println("Debug: " + cl.getName() + ": " + message);
+        if(debugEnable)
+            System.out.println("Debug: " + cl.getName() + ": " + message);
     }
     
 }
