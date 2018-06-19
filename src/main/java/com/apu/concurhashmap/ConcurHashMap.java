@@ -26,13 +26,13 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     private final int BLOCKS_AMOUNT_MULT = 2;
     private final float LOAD_FACTOR_DEFAULT = 0.75f;    
     
-    private Block<K,V>[] blocks;    
+    private final Block<K,V>[] blocks;    
     private final GlobalLock globalLock = new GlobalLock();
     private int blockSize;
     private int blocksAmount; 
     private int fullSize;
 
-    transient int modCount;
+    private volatile transient int modCount;
     
     public ConcurHashMap() {
         this(INIT_BLOCK_SIZE, INIT_BLOCKS_AMOUNT);
@@ -127,31 +127,38 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         Block block = blockPtr.block;
         int index = blockPtr.index;
 //        System.out.println(Thread.currentThread().getName() + " - rdB" + blockPtr.blockId);
-        block.lock.lockRead();
-        
-        if(block.table[index] == null)
-            retValue = null;        
-        
-        Node<K,V> node = block.table[index];
-        if(node == null) {
-            retValue = null;
-        } else if(node.next == null) {
-            if(node.key.equals((K)key)) {
-                retValue = node.value;
-            }
-        } else {
-            while(node != null) {
-                if(node.key.equals((K)key)) {
+        block.lock.lockRead();    
+        try {
+            Node<K,V> node = block.table[index];
+            if(node == null) {
+                retValue = null;
+            } else if(node.next == null) {
+                if(node.key.equals(key)) {
                     retValue = node.value;
-                    break;
                 }
-                node = node.next;
-            } 
-        }
-        
-        block.lock.unlockRead();
-        
-        return retValue;
+            } else {
+                while(node != null) {
+                    if(node.key.equals(key)) {
+                        retValue = node.value;
+                        break;
+                    }
+                    node = node.next;
+                } 
+            }
+
+//            if(retValue == null) {
+//                node = block.table[index];
+//                System.out.println("key:" + key + "hash:" + hash(key) + ", Bl:" + block + ", id:" + index);
+//                while(node != null) {
+//                    System.out.print(node.value + ",");
+//                    node = node.next;
+//                }
+//                System.out.println("");
+//            } 
+            return retValue;
+        } finally {
+            block.lock.unlockRead();
+        }        
     } 
     
     private V put(BlockPtr blockPtr, K key, V value) {
@@ -159,112 +166,127 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         Block block = blockPtr.block;
         int index = blockPtr.index;
 //        System.out.println(Thread.currentThread().getName() + " - wrB" + blockPtr.blockId);
-        block.lock.lockWrite();
-        
-        Node<K,V> node = new Node<>(key.hashCode(), key, value, null);
-        Node<K,V> firstNode = block.table[index];
-        if(firstNode == null) {
-            block.table[index] = node;
-            block.table[index].length++;
-        } else {
-            Node<K,V> nodeTemp = firstNode;
-            Node<K,V> nodeFinded = null;
-            Node<K,V> nodePrev = nodeTemp;
-            if(nodeTemp.next == null) {
-                if(nodeTemp.key.equals(key)) {
-                    nodeFinded = nodeTemp;
-                }
-            } else {
-                while(nodeTemp != null) {
-                    if(nodeTemp.key.equals(key)) {
-                        nodeFinded = nodeTemp;
-                        break;
+        synchronized(block.lock) {
+            block.lock.lockWrite();
+            try {
+                Node<K,V> node = new Node<>(key.hashCode(), key, value, null);
+                Node<K,V> firstNode = block.table[index];
+                if(firstNode == null) {
+                    block.table[index] = node;
+                    block.table[index].length++;
+                } else {
+                    Node<K,V> nodeTemp = firstNode;
+                    Node<K,V> nodeFinded = null;
+                    Node<K,V> nodePrev = nodeTemp;
+                    if(nodeTemp.next == null) {
+                        if(nodeTemp.key.equals(key)) {
+                            nodeFinded = nodeTemp;
+                        }
+                    } else {
+                        while(nodeTemp != null) {
+                            if(nodeTemp.key.equals(key)) {
+                                nodeFinded = nodeTemp;
+                                break;
+                            }
+                            nodePrev = nodeTemp;
+                            nodeTemp = nodeTemp.next;
+                        } 
                     }
-                    nodePrev = nodeTemp;
-                    nodeTemp = nodeTemp.next;
-                } 
+                    if(nodeFinded != null) {
+                        retValue = nodeFinded.value;
+                        nodeFinded.value = value;
+                    } else {
+                        nodePrev.next = node;
+                        firstNode.length++;
+                    }             
+                }   
+            } finally {
+                block.lock.unlockWrite();
             }
-            if(nodeFinded != null) {
-                retValue = nodeFinded.value;
-                nodeFinded.value = value;
-            } else {
-                nodePrev.next = node;
-                firstNode.length++;
-            }             
+//        refreshTable();        
+            ++modCount;        
         }
-        
-        block.lock.unlockWrite();
-        
-//        refreshTable();
-        
-        ++modCount;
-        
-        return retValue;
+            return retValue;
     }
 
     private V remove(BlockPtr blockPtr, Object key) {        
         Block block = blockPtr.block;
         int index = blockPtr.index;
-        
-        block.lock.lockWrite();
-        
         V retValue = null;
-        Node<K,V> node = block.table[index];
-        if(node != null) {
-            Node<K,V> nodePrev = null;
-            do {
-                if(node.key.equals(key)) {
-                    retValue = node.value;
-                    if(nodePrev == null) { //first node in the list                        
-                        block.table[index] = node.next;
+        synchronized(block) {    
+            block.lock.lockWrite();
+            try {            
+                Node<K,V> firstNode = block.table[index];
+                if(firstNode != null) {        
+                    Node<K,V> nodeTemp = firstNode;
+                    Node<K,V> nodeFinded = null;
+                    Node<K,V> nodePrev = nodeTemp;
+                    if(nodeTemp.next == null) {
+                        if(nodeTemp.key.equals(key)) {
+                            retValue = nodeTemp.value;
+                            block.table[index] = null;
+                        }
                     } else {
-                        nodePrev.next = node.next;
-                    }
-                }
-                nodePrev = node;
-                node = node.next;
-            } while(node != null);            
-            
+                        while(nodeTemp != null) {
+                            if(nodeTemp.key.equals(key)) {
+                                retValue = nodeTemp.value;
+                                if(nodeTemp == firstNode) {
+                                    int length = nodeTemp.length;
+                                    block.table[index] = nodeTemp.next;
+                                    block.table[index].length = length;
+                                } else {
+                                    nodePrev.next = nodeTemp.next;
+                                }
+                                block.table[index].length--;
+                                break;
+                            }
+                            nodePrev = nodeTemp;
+                            nodeTemp = nodeTemp.next;
+                        } 
+                    }  
+                }        
+
+            } finally {
+                block.lock.unlockWrite();        
+            }
+    //        refreshTable(); 
+                ++modCount;
         }
-        
-        block.lock.unlockWrite();        
-//        refreshTable(); 
-        ++modCount;
-        return retValue;
+            return retValue;
     }
         
     private void refreshTable() {
-        int fullSize = this.size();
-        int hashTableSize = blockSize * blocksAmount;
-        float loadFactorTemp = (float)hashTableSize / fullSize;
-        if(loadFactorTemp < LOAD_FACTOR_DEFAULT) { 
-            System.out.println("GlobalLockTry");
-            if(globalLock.tryLock()) {
-                System.out.println("GlobalLockOn");
-                int newBlockSize = blockSize * BLOCK_SIZE_MULT;
-                int newBlocksAmount = blocksAmount * BLOCKS_AMOUNT_MULT;                
-                System.out.println(System.currentTimeMillis() + 
-                                    ", size:" + fullSize + 
-                                    ", LF:" + loadFactorTemp + 
-                                    ", BlockSize:" + newBlockSize + 
-                                    ", BlocksAmount:" + newBlocksAmount);
-
-                ConcurHashMap newMap = 
-                        new ConcurHashMap(newBlockSize, newBlocksAmount);
-                for(Node<K,V> node:this.getAllAsList()) {
-                    newMap.put(node.key, node.value);
-                }
-                
-                this.blocks = newMap.blocks;
-                this.blockSize = newMap.blockSize;
-                this.blocksAmount = newMap.blocksAmount;
-
-                globalLock.unlock();   
-                System.out.println("GlobalLockOff");
-            } else {
-                System.out.println("Global lock busy");
-            }
-        }            
+//        int fullSize = this.size();
+//        int hashTableSize = blockSize * blocksAmount;
+//        float loadFactorTemp = (float)hashTableSize / fullSize;
+//        if(loadFactorTemp < LOAD_FACTOR_DEFAULT) { 
+//            System.out.println("GlobalLockTry");
+//            if(globalLock.tryLock()) {
+//                System.out.println("GlobalLockOn");
+//                int newBlockSize = blockSize * BLOCK_SIZE_MULT;
+//                int newBlocksAmount = blocksAmount * BLOCKS_AMOUNT_MULT;                
+//                System.out.println(System.currentTimeMillis() + 
+//                                    ", size:" + fullSize + 
+//                                    ", LF:" + loadFactorTemp + 
+//                                    ", BlockSize:" + newBlockSize + 
+//                                    ", BlocksAmount:" + newBlocksAmount);
+//
+//                ConcurHashMap newMap = 
+//                        new ConcurHashMap(newBlockSize, newBlocksAmount);
+//                for(Node<K,V> node:this.getAllAsList()) {
+//                    newMap.put(node.key, node.value);
+//                }
+//                
+//                this.blocks = newMap.blocks;
+//                this.blockSize = newMap.blockSize;
+//                this.blocksAmount = newMap.blocksAmount;
+//
+//                globalLock.unlock();   
+//                System.out.println("GlobalLockOff");
+//            } else {
+//                System.out.println("Global lock busy");
+//            }
+//        }            
     }
     
     private int hash(Object key) {
@@ -280,8 +302,8 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     }
     
     private class Block<K,V> {
-        Node<K,V>[] table;
-        RWLock lock;
+        final Node<K,V>[] table;
+        final RWLock lock;
 
         public Block(int blockSize, GlobalLock globalLock) {
             table = new Node[blockSize];
@@ -307,7 +329,7 @@ public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
         final K key;
         V value;
         Node<K,V> next;
-        int length;
+        volatile int length = 0;
 
         Node(int hash, K key, V value, Node<K,V> next) {
             this.hash = hash;
