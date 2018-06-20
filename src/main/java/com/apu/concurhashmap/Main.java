@@ -41,7 +41,7 @@ public class Main {
         for(int threadNumber=0; threadNumber<THREAD_AMOUNT; threadNumber++) {
             start += MAX_TEST;
             for(int ptr=0; ptr<MAX_TEST; ptr++) {                
-                Double dbl = Math.random()*(ptr+start);
+                Double dbl = Math.random()*(start);//ptr+
                 int m = dbl.intValue();
                 int k = (m%start) + start;
 //                int k = ptr + start;
