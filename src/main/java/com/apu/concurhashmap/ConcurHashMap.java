@@ -21,7 +21,7 @@ import java.util.function.BiConsumer;
 public class ConcurHashMap<K,V> extends AbstractMap<K,V> {
     
     private static final int INIT_BLOCK_SIZE = 10;
-    private static final int INIT_BLOCKS_AMOUNT = 1000;
+    private static final int INIT_BLOCKS_AMOUNT = 10000;
     private final int BLOCK_SIZE_MULT = 2;
     private final int BLOCKS_AMOUNT_MULT = 2;
     private final float LOAD_FACTOR_DEFAULT = 0.75f;    
