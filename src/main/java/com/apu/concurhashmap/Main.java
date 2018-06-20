@@ -22,7 +22,7 @@ import java.util.logging.Logger;
  */
 public class Main {
     
-    static final int MAX_TEST = 100000;
+    static final int MAX_TEST = 600000;
     
     public static void main(String[] args) {
         Map<Integer, Integer> mapEt = new HashMap();
@@ -69,7 +69,7 @@ public class Main {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
         long finishTime = System.currentTimeMillis();
-        System.out.println(finishTime - startTime + " ms, map0: " + map0.size());
+        System.out.println(finishTime - startTime + " ms, ConcurHashMap: " + map0.size());
 
         //test2
         latchStart = new CountDownLatch(THREAD_AMOUNT);
@@ -88,7 +88,7 @@ public class Main {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
         }
         finishTime = System.currentTimeMillis();
-        System.out.println(finishTime - startTime + " ms, map3: " + map3.size());
+        System.out.println(finishTime - startTime + " ms, Hashtable: " + map3.size());
     }
     
     static class TestHashTable implements Runnable {
